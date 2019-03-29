@@ -3,9 +3,10 @@
 We are a group of 2 students studying in the University of Colorado, Boulder for INFO 5871: Recommender Systems.
 
 
-Our project is to replicate the research done in the paper [__Leveraging Social Connections to Improve Personalized Ranking for Collaborative Filtering__](https://dl.acm.org/citation.cfm?doid=2661829.2661998)
+This projects implements "one-class" recommendation system to solve user preference problem by leveraging social connections of users.
 
 References **(cloned in the references directory)**:
+-  [__Leveraging Social Connections to Improve Personalized Ranking for Collaborative Filtering__](https://dl.acm.org/citation.cfm?doid=2661829.2661998)
 - [bpr](https://github.com/gamboviol/bpr.git) by `gamboviol`
 
 - [BPR_MPR](https://github.com/RunlongYu/BPR_MPR.git) by `RunlongYu`
