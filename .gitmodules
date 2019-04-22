@@ -1,0 +1,6 @@
+[submodule "references/BPR_MPR"]
+	path = references/BPR_MPR
+	url = https://github.com/RunlongYu/BPR_MPR.git
+[submodule "references/bpr"]
+	path = references/bpr
+	url = https://github.com/gamboviol/bpr.git
