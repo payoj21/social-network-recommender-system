@@ -109,7 +109,7 @@ for user in unique_users:
         # get unobserved items of friend v -> nO(v)
         friend_unobserved = unique_items - set(df_observed.query('user == @friend')['item'])
         # get intersection for all friends (cumulative intersection) with nO(u)
-        negative = unobserved & friend_unobserved
+        negative = negative & friend_unobserved
     n = len(negative)
     neg_users.extend([user]*n)
     neg_items.extend(negative)
