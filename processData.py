@@ -27,7 +27,6 @@ df_observed = df_ratings.query('rating >= 4')
 print ("Filtered out ratings >= 4")
 
 # Filter in the users who have rated number of items >= 5
-df_observed = df_observed.groupby('user').filter(lambda x: len(x) > 5)
 divide = 1
 if dataset == 'Lthing':
     divide = 10
@@ -36,14 +35,14 @@ elif dataset == 'Epinions':
 x = list(df_observed['user'].unique())
 y = list(df_observed['item'].unique())
 size = int(len(x) / divide)
-size2 = int(len(y) / (5*divide))
 half_users = x[:size]
-half_items = y[:size2]
+half_items = y[:size]
 print ("New number of unique users:", len(half_users))
 print ("New number of unique items:", len(half_items))
 
 # Save this dataframe to output file. This is positive feedback P.
 df_positive = df_observed.query('user in @half_users and item in @half_items')
+df_positive = df_positive.groupby('user').filter(lambda x: len(x) >= 5)
 
 
 positive_output = open(datadir + '/positive_feedback_dataframe.pkl', 'wb')
@@ -51,8 +50,8 @@ pickle.dump(df_positive, positive_output)
 print ("Filtered out and saved observed / positive (P)")
 
 # Get unique users and items from observed data
-unique_users = set(df_observed['user'].unique())
-unique_items = set(df_observed['item'].unique())
+unique_users = set(df_positive['user'].unique())
+unique_items = set(df_positive['item'].unique())
 
 # Filter out those users from trust data who do not appear in the observed dataframe
 ## Start with source users
@@ -76,12 +75,12 @@ soc_users = []
 soc_items = []
 for user in unique_users:
     # get unobserved items for user u -> nO(u)
-    unobserved = unique_items - set(df_observed.query('user == @user')['item'])
+    unobserved = unique_items - set(df_positive.query('user == @user')['item'])
     # get friends (v in V) of user u
     friends = list(df_trust.query('user == @user')['friend'])
     for friend in friends:
         # get observed items of friend v -> O(v)
-        observed = set(df_observed.query('user == @friend')['item'])
+        observed = set(df_positive.query('user == @friend')['item'])
         # calculate SP(u) = O(v) & nO(u)
         social_positive_feedback = list(observed & unobserved)
         # get length and append to dataframe

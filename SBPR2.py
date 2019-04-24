@@ -170,7 +170,7 @@ class SBPR2:
         # to avoid re-computation at predict
         self._prediction = None
         
-    def fit(self, ratings, sampler):
+    def fit(self, ratings):
         """
         Parameters
         ----------
@@ -190,6 +190,10 @@ class SBPR2:
         rstate = np.random.RandomState(self.seed)
         self.user_factors = rstate.normal(size = (n_users, self.n_factors))
         self.item_factors = rstate.normal(size = (n_items, self.n_factors))
+        
+        return self
+    
+    def train(self, sampler):
         
         # progress bar for training iteration if verbose is turned on
         loop = range(self.n_iters)
@@ -405,7 +409,8 @@ if __name__ == '__main__':
 
     # Run SBPR1
     sbpr2 = SBPR2(**sbpr2_params)
-    sbpr2.fit(X_train, sampler)
+    sbpr2 = sbpr2.fit(X_train)
+    sbpr2.train(sampler)
     auc = sbpr2.auc_scores
     def save_state(file_name):
 

@@ -190,10 +190,15 @@ class SBPR1:
         self.user_factors = rstate.normal(size = (n_users, self.n_factors))
         self.item_factors = rstate.normal(size = (n_items, self.n_factors))
         
+        return self
+    
+    def train(self, sampler):
+        
         # progress bar for training iteration if verbose is turned on
         loop = range(self.n_iters)
         if self.verbose:
             loop = trange(self.n_iters, desc = self.__class__.__name__)
+            
         self.auc_scores = []
         for _ in loop:
             for _ in range(batch_iters):
@@ -389,7 +394,8 @@ if __name__ == '__main__':
 
     # Run SBPR1
     sbpr1 = SBPR1(**sbpr1_params)
-    sbpr1.fit(X_train, sampler)
+    sbpr1 = sbpr1.fit(X_train)
+    sbpr1.train(sampler)
     auc = sbpr1.auc_scores
     
     def save_state(file_name):

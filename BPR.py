@@ -121,7 +121,7 @@ class BPR:
         # to avoid re-computation at predict
         self._prediction = None
         
-    def fit(self, ratings, sampler):
+    def fit(self, ratings):
         n_users, n_items = ratings.shape
         
         batch_size = self.batch_size
@@ -137,11 +137,14 @@ class BPR:
         self.user_factors = rstate.normal(size = (n_users, self.n_factors))
         self.item_factors = rstate.normal(size = (n_items, self.n_factors))
         
+        return self
+        
+    def train(self, sampler):
         # progress bar for training iteration if verbose is turned on
         loop = range(self.n_iters)
         if self.verbose:
             loop = trange(self.n_iters, desc = self.__class__.__name__)
-        
+            
         self.auc_scores = []
         for _ in loop:
             for _ in range(batch_iters):
@@ -162,7 +165,7 @@ class BPR:
                 
                 self._update(sampled_users, sampled_pos_items, sampled_neg_items)
             self.auc_scores.append(auc_score(self, ratings))
-#         return self
+        return self
                 
     def _update(self, u, i, j):
         user_u = self.user_factors[u]
@@ -299,7 +302,8 @@ if __name__ == '__main__':
 
     # Run BPR
     bpr = BPR(**bpr_params)
-    bpr.fit(X_train, sampler)
+    bpr = bpr.fit(X_train)
+    bpr.train(sampler)
     
     def save_state(file_name):
 
