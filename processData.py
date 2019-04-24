@@ -31,12 +31,13 @@ divide = 1
 if dataset == 'Lthing':
     divide = 10
 elif dataset == 'Epinions':
-    divide = 8
+    divide = 11
 x = list(df_observed['user'].unique())
 y = list(df_observed['item'].unique())
 size = int(len(x) / divide)
+size2 = int(len(y) / (1.5*divide))
 half_users = x[:size]
-half_items = y[:size]
+half_items = y[:size2]
 print ("New number of unique users:", len(half_users))
 print ("New number of unique items:", len(half_items))
 
@@ -73,7 +74,9 @@ print ("Filtered out and saved trust data")
 # Get social positive SP(u) feedback 
 soc_users = []
 soc_items = []
+i = 1
 for user in unique_users:
+    print (i)
     # get unobserved items for user u -> nO(u)
     unobserved = unique_items - set(df_positive.query('user == @user')['item'])
     # get friends (v in V) of user u
@@ -87,7 +90,7 @@ for user in unique_users:
         n = len(social_positive_feedback)
         soc_users.extend([user]*n)
         soc_items.extend(social_positive_feedback)
-        
+    i += 1
 print ("Finished getting social positive feedback")
 
 # Convert to dataframe

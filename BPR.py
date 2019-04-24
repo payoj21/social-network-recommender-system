@@ -130,7 +130,7 @@ class BPR:
             sys.stderr.write('WARNING: Batch size is greater than number of users,'
                              'switching to a batch size of {}\n'.format(n_users))
 
-        batch_iters = n_users // batch_size
+        self.batch_iters = n_users // batch_size
         
         # initialize random weights
         rstate = np.random.RandomState(self.seed)
@@ -147,7 +147,7 @@ class BPR:
             
         self.auc_scores = []
         for _ in loop:
-            for _ in range(batch_iters):
+            for _ in range(self.batch_iters):
                 user, items = sampler.static()
                 sampled_users = np.zeros(self.batch_size, dtype = np.int)
                 sampled_users[0] = sampler.mappings['user_code'][user]
@@ -164,7 +164,7 @@ class BPR:
                 sampled_neg_items[0] = sampler.mappings['item_code'][items['N']]
                 
                 self._update(sampled_users, sampled_pos_items, sampled_neg_items)
-            self.auc_scores.append(auc_score(self, ratings))
+            self.auc_scores.append(auc_score(self, X_test))
         return self
                 
     def _update(self, u, i, j):
@@ -294,9 +294,9 @@ if __name__ == '__main__':
     sampler = Sample(dataHandler.P, dataHandler.SP, mappings)
     
     # Initiliaze BPR params
-    bpr_params = {'reg_u': 0.005,
-                  'reg_i': 0.005,
-                  'learning_rate': 0.3,
+    bpr_params = {'reg_u': 0.025,
+                  'reg_i': 0.025,
+                  'learning_rate': 0.1,
                   'n_iters': 100,
                   'n_factors': 10}
 

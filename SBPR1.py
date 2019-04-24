@@ -108,49 +108,6 @@ class Sample:
         return user, items
 
 class SBPR1:
-    """
-    Bayesian Personalized Ranking (BPR) for implicit feedback data
-
-    Parameters
-    ----------
-    learning_rate : float, default 0.01
-        learning rate for gradient descent
-
-    n_factors : int, default 20
-        Number/dimension of user and item latent factors
-
-    n_iters : int, default 15
-        Number of iterations to train the algorithm
-        
-    batch_size : int, default 1000
-        batch size for batch gradient descent, the original paper
-        uses stochastic gradient descent (i.e., batch size of 1),
-        but this can make the training unstable (very sensitive to
-        learning rate)
-
-    reg : int, default 0.01
-        Regularization term for the user and item latent factors
-
-    seed : int, default 1234
-        Seed for the randomly initialized user, item latent factors
-
-    verbose : bool, default True
-        Whether to print progress bar while training
-
-    Attributes
-    ----------
-    user_factors : 2d ndarray, shape [n_users, n_factors]
-        User latent factors learnt
-
-    item_factors : 2d ndarray, shape [n_items, n_factors]
-        Item latent factors learnt
-
-    References
-    ----------
-    S. Rendle, C. Freudenthaler, Z. Gantner, L. Schmidt-Thieme 
-    Bayesian Personalized Ranking from Implicit Feedback
-    - https://arxiv.org/abs/1205.2618
-    """
     def __init__(self, learning_rate = 0.01, n_factors = 15, n_iters = 10, batch_size = 1, 
                  social_coefficient = 1, reg_u = 0.015, reg_i = 0.025, reg_k = 0.025, reg_j = 0.025, seed = 1234, verbose = True):
         self.reg_u = reg_u
@@ -169,7 +126,7 @@ class SBPR1:
         # to avoid re-computation at predict
         self._prediction = None
         
-    def fit(self, ratings, sampler):
+    def fit(self, ratings):
         """
         Parameters
         ----------
@@ -183,7 +140,7 @@ class SBPR1:
             sys.stderr.write('WARNING: Batch size is greater than number of users,'
                              'switching to a batch size of {}\n'.format(n_users))
 
-        batch_iters = n_users // batch_size
+        self.batch_iters = n_users // batch_size
         
         # initialize random weights
         rstate = np.random.RandomState(self.seed)
@@ -201,7 +158,7 @@ class SBPR1:
             
         self.auc_scores = []
         for _ in loop:
-            for _ in range(batch_iters):
+            for _ in range(self.batch_iters):
                 user, items = sampler.static(True)
                 sampled_users = np.zeros(self.batch_size, dtype = np.int)
                 sampled_users[0] = sampler.mappings['user_code'][user]
