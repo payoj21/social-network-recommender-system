@@ -294,7 +294,7 @@ if __name__ == '__main__':
     bpr_params = {'reg_u': 0.025,
                   'reg_i': 0.025,
                   'learning_rate': 0.1,
-                  'n_iters': 1,
+                  'n_iters': 100,
                   'n_factors': 10}
 
     # Run BPR
