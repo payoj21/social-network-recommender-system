@@ -7,7 +7,7 @@ import sys
 dataset = str(sys.argv[1])
 print ("Dataset:", dataset)
 print ()
-datadir = './data/' + dataset
+datadir = '../data/' + dataset
 print ("Loading data ...")
 print ()
 
@@ -26,27 +26,33 @@ df_trust.columns = ['user', 'friend', 'trust']
 df_observed = df_ratings.query('rating >= 4')
 print ("Filtered out ratings >= 4")
 
-# Filter out the users who have rated number of items < threshold i.e. 5
-cold_start = df_observed.groupby('user').filter(lambda x : len(x) < 5)
-
-# Save this dataframe to output file
-cold_start_output = open(datadir + '/cold_start_dataframe.pkl', 'wb')
-pickle.dump(cold_start, cold_start_output)
-cold_start_output.close()
-print ("Filtered out and saved cold start")
-
 # Filter in the users who have rated number of items >= 5
 df_observed = df_observed.groupby('user').filter(lambda x: len(x) > 5)
+divide = 1
+if dataset == 'Lthing':
+    divide = 10
+elif dataset == 'Epinions':
+    divide = 8
+x = list(df_observed['user'].unique())
+y = list(df_observed['item'].unique())
+size = int(len(x) / divide)
+size2 = int(len(y) / (5*divide))
+half_users = x[:size]
+half_items = y[:size2]
+print ("New number of unique users:", len(half_users))
+print ("New number of unique items:", len(half_items))
 
 # Save this dataframe to output file. This is positive feedback P.
-df_positive = df_observed
+df_positive = df_observed.query('user in @half_users and item in @half_items')
+
+
 positive_output = open(datadir + '/positive_feedback_dataframe.pkl', 'wb')
 pickle.dump(df_positive, positive_output)
 print ("Filtered out and saved observed / positive (P)")
 
 # Get unique users and items from observed data
 unique_users = set(df_observed['user'].unique())
-unique_items = set(df_observed['user'].unique())
+unique_items = set(df_observed['item'].unique())
 
 # Filter out those users from trust data who do not appear in the observed dataframe
 ## Start with source users
@@ -94,37 +100,6 @@ social_positive_output = open(datadir + '/social_positive_feedback_dataframe.pkl
 pickle.dump(social_positive_df, social_positive_output)
 social_positive_output.close()
 print ("Saved SP to file")
-
-# Create N(u) dataframe
-neg_users = []
-neg_items = []
-for user in unique_users:
-    # get unobserved items for user u -> nO(u)
-    unobserved = unique_items - set(df_observed.query('user == @user')['item'])
-    # get friends (v in V) of user u
-    friends = list(df_trust.query('user == @user')['friend'])
-    # initialize negative to nO(u)
-    negative = unobserved
-    for friend in friends:
-        # get unobserved items of friend v -> nO(v)
-        friend_unobserved = unique_items - set(df_observed.query('user == @friend')['item'])
-        # get intersection for all friends (cumulative intersection) with nO(u)
-        negative = negative & friend_unobserved
-    n = len(negative)
-    neg_users.extend([user]*n)
-    neg_items.extend(negative)
-    
-print ("Finished getting negative feedback")
-
-# Convert to dataframe
-negative_df = pd.DataFrame({'user':neg_users, 'item':neg_items})
-print ("Converted to N dataframe")
-
-# Save this dataframe to output file. This is negative feedback N.
-negative_output = open(datadir + '/negative_feedback_dataframe.pkl', 'wb')
-pickle.dump(negative_df, negative_output)
-negative_output.close()
-print ("Saved N to file")
 
 print ()
 print ("... Done")

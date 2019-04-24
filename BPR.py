@@ -291,9 +291,9 @@ if __name__ == '__main__':
     sampler = Sample(dataHandler.P, dataHandler.SP, mappings)
     
     # Initiliaze BPR params
-    bpr_params = {'reg_u': 0.025,
-                  'reg_i': 0.025,
-                  'learning_rate': 0.1,
+    bpr_params = {'reg_u': 0.005,
+                  'reg_i': 0.005,
+                  'learning_rate': 0.3,
                   'n_iters': 100,
                   'n_factors': 10}
 
