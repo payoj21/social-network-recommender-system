@@ -109,7 +109,7 @@ class Sample:
 
 class SBPR1:
     def __init__(self, learning_rate = 0.01, n_factors = 15, n_iters = 10, batch_size = 1, 
-                 social_coefficient = 1, reg_u = 0.015, reg_i = 0.025, reg_k = 0.025, reg_j = 0.025, seed = 1234, verbose = True):
+                 social_coefficient = 1, reg_u = 0.015, reg_i = 0.025, reg_k = 0.015, reg_j = 0.015, seed = 1234, verbose = True):
         self.reg_u = reg_u
         self.reg_i = reg_i
         self.reg_k = reg_k
@@ -192,36 +192,49 @@ class SBPR1:
         item_j = self.item_factors[j]
         if k != -1:
             item_k = self.item_factors[k]
+            r_uij = np.sum(user_u * (item_i - item_j), axis = 1)
+            sigmoid_uij = 1.0 / (1.0 + np.exp(r_uij))     # derivation of 1/(1+exp(-x))
+
+            r_uik = np.sum(user_u*(item_i - item_k), axis = 1)/(1 + self.s_uk)
+            sigmoid_uik = 1.0 / (1.0 + np.exp(r_uik))     # derivation of 1/(1+exp(-x))
+
+            # repeat the 1 dimension sigmoid n_factors times so
+            # the dimension will match when doing the update
+
+            sigmoid_uik_tiled = np.tile(sigmoid_uik, (self.n_factors, 1)).T
+            sigmoid_uij_tiled = np.tile(sigmoid_uij, (self.n_factors, 1)).T
+
+
+            # update using gradient descent
+
+            grad_u = sigmoid_uik_tiled * ((item_k - item_i)/(1 + self.s_uk)) + sigmoid_uij_tiled * (item_j - item_i) + self.reg_u * user_u
+            grad_i = sigmoid_uik_tiled * (-user_u)/(1 + self.s_uk) + sigmoid_uij_tiled * (-user_u) + self.reg_i * item_i
+            grad_k = sigmoid_uik_tiled * (user_u/(1 + self.s_uk)) + self.reg_k * item_k
+            grad_j = (sigmoid_uij_tiled * user_u) + self.reg_j * item_j
+
+
+            self.user_factors[u] -= self.learning_rate * grad_u
+            self.item_factors[i] -= self.learning_rate * grad_i
+            self.item_factors[k] -= self.learning_rate * grad_k
+            self.item_factors[j] -= self.learning_rate * grad_j
         else:
-            item_k = 0
         # decompose the estimator, compute the difference between
         # the score of the (positive and social items) and (social and negative items) ; 
 
-        r_uij = np.sum(user_u * (item_i - item_j), axis = 1)
-        sigmoid_uij = np.exp(-r_uij) / (1.0 + np.exp(-r_uij))     # derivation of 1/(1+exp(-x))
-        
-        r_uik = np.sum(user_u*(item_i - item_k), axis = 1)/(1 + self.s_uk)
-        sigmoid_uik = np.exp(-r_uik) / (1.0 + np.exp(-r_uik))     # derivation of 1/(1+exp(-x))
-        
-        # repeat the 1 dimension sigmoid n_factors times so
-        # the dimension will match when doing the update
-        
-        sigmoid_uik_tiled = np.tile(sigmoid_uik, (self.n_factors, 1)).T
-        sigmoid_uij_tiled = np.tile(sigmoid_uij, (self.n_factors, 1)).T
-        
+            r_uij = np.sum(user_u * (item_i - item_j), axis = 1)
+            sigmoid = 1.0 / (1.0 + np.exp(r_uij))
 
-        # update using gradient descent
+            # repeat the 1 dimension sigmoid n_factors times so
+            # the dimension will match when doing the update
+            sigmoid_tiled = np.tile(sigmoid, (self.n_factors, 1)).T
 
-        grad_u = sigmoid_uik_tiled * ((item_k - item_i)/(1 + self.s_uk)) + sigmoid_uij_tiled * (item_j - item_i) + self.reg_u * user_u
-        grad_i = sigmoid_uik_tiled * (-user_u)/(1 + self.s_uk) + sigmoid_uij_tiled * (-user_u) + self.reg_i * item_i
-        grad_k = sigmoid_uik_tiled * (user_u/(1 + self.s_uk)) + self.reg_k * item_k
-        grad_j = (sigmoid_uij_tiled * user_u) + self.reg_j * item_j
-
-        
-        self.user_factors[u] -= self.learning_rate * grad_u
-        self.item_factors[i] -= self.learning_rate * grad_i
-        self.item_factors[k] -= self.learning_rate * grad_k
-        self.item_factors[j] -= self.learning_rate * grad_j
+            # update using gradient descent
+            grad_u = sigmoid_tiled * (item_j - item_i) + self.reg_u * user_u
+            grad_i = sigmoid_tiled * -user_u + self.reg_i * item_i
+            grad_j = sigmoid_tiled * user_u + self.reg_i * item_j
+            self.user_factors[u] -= self.learning_rate * grad_u
+            self.item_factors[i] -= self.learning_rate * grad_i
+            self.item_factors[j] -= self.learning_rate * grad_j
         
         return self
 
@@ -343,13 +356,14 @@ if __name__ == '__main__':
     sampler = Sample(dataHandler.P, dataHandler.SP, mappings)
     
     # Initiliaze BPR params
-    sbpr1_params = {'reg_u': 0.025,
-                  'reg_i': 0.025,
-                  'learning_rate': 0.1,
+    sbpr1_params = {'reg_u': 0.005,
+                  'reg_i': 0.005,
+                  'learning_rate': 0.3,
                   'n_iters': 100,
                   'n_factors': 10}
 
     # Run SBPR1
+    print (sbpr1_params)
     sbpr1 = SBPR1(**sbpr1_params)
     sbpr1 = sbpr1.fit(X_train)
     sbpr1.train(sampler)
