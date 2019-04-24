@@ -314,7 +314,7 @@ if __name__ == '__main__':
         except:
             log.error('I/O error({0}): {1}'.format(ioe.errno, ioe.strerror))
     
-    save_state('../models/filmtrustbpr_model.pkl')
+    save_state('../models/' + dataset + '/bpr_model.pkl')
     auc = bpr.auc_scores
     
     # Save the model and AUC scores

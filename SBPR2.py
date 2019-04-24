@@ -393,6 +393,20 @@ if __name__ == '__main__':
     sbpr2 = SBPR2(**sbpr2_params)
     sbpr2.fit(X_train, sampler)
     auc = sbpr2.auc_scores
+    def save_state(file_name):
+
+        blob = {}
+
+        for param in sbpr2.__dict__:
+            blob[param] = sbpr2.__dict__.get(param)
+
+        try:
+            with open(file_name, 'wb') as wfile:
+                pickle.dump(dict(blobs = blob), wfile, pickle.HIGHEST_PROTOCOL)
+        except:
+            log.error('I/O error({0}): {1}'.format(ioe.errno, ioe.strerror))
+    
+    save_state('../models/' + dataset + '/sbpr2_model.pkl')
     
     # Save the model and AUC scores
     dataHandler.save('../models/', sbpr2, 'SBPR2')
