@@ -186,7 +186,7 @@ class BPR:
         self.user_factors[u] -= self.learning_rate * grad_u
         self.item_factors[i] -= self.learning_rate * grad_i
         self.item_factors[j] -= self.learning_rate * grad_j
-#         return self
+        return self
 
     def predict(self):
         if self._prediction is None:
@@ -296,14 +296,14 @@ if __name__ == '__main__':
     # Initiliaze BPR params
     bpr_params = {'reg_u': 0.025,
                   'reg_i': 0.025,
-                  'learning_rate': 0.1,
+                  'learning_rate': 0.05,
                   'n_iters': 100,
                   'n_factors': 10}
 
     # Run BPR
     bpr = BPR(**bpr_params)
     bpr = bpr.fit(X_train)
-    bpr.train(sampler)
+    bpr = bpr.train(sampler)
     
     def save_state(file_name):
 
@@ -312,16 +312,14 @@ if __name__ == '__main__':
         for param in bpr.__dict__:
             blob[param] = bpr.__dict__.get(param)
 
-        try:
-            with open(file_name, 'wb') as wfile:
-                pickle.dump(dict(blobs = blob), wfile, pickle.HIGHEST_PROTOCOL)
-        except:
-            log.error('I/O error({0}): {1}'.format(ioe.errno, ioe.strerror))
+        with open(file_name, 'wb') as wfile:
+            pickle.dump(dict(blobs = blob), wfile, pickle.HIGHEST_PROTOCOL)
+
     
-    save_state('../models/' + dataset + '/bpr_model.pkl')
+    save_state('./models/' + dataset + '/bpr_model.pkl')
     auc = bpr.auc_scores
     
     # Save the model and AUC scores
     
-    dataHandler.save('../results/', auc, 'BPR_AUC')
+    dataHandler.save('./results/', auc, 'BPR_AUC')
     
