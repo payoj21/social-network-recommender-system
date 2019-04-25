@@ -109,7 +109,7 @@ class Sample:
 
 class SBPR1:
     def __init__(self, learning_rate = 0.01, n_factors = 15, n_iters = 10, batch_size = 1, 
-                 social_coefficient = 1, reg_u = 0.015, reg_i = 0.025, reg_k = 0.025, reg_j = 0.025, seed = 1234, verbose = True):
+                 social_coefficient = 1, reg_u = 0.015, reg_i = 0.025, reg_k = 0.015, reg_j = 0.015, seed = 1234, verbose = True):
         self.reg_u = reg_u
         self.reg_i = reg_i
         self.reg_k = reg_k
@@ -220,9 +220,6 @@ class SBPR1:
         else:
         # decompose the estimator, compute the difference between
         # the score of the (positive and social items) and (social and negative items) ; 
-            user_u = self.user_factors[u]
-            item_i = self.item_factors[i]
-            item_j = self.item_factors[j]
 
             r_uij = np.sum(user_u * (item_i - item_j), axis = 1)
             sigmoid = 1.0 / (1.0 + np.exp(r_uij))
@@ -238,7 +235,6 @@ class SBPR1:
             self.user_factors[u] -= self.learning_rate * grad_u
             self.item_factors[i] -= self.learning_rate * grad_i
             self.item_factors[j] -= self.learning_rate * grad_j
-        
         
         return self
 
@@ -369,6 +365,7 @@ if __name__ == '__main__':
     print (sbpr1_params)
 
     # Run SBPR1
+    print (sbpr1_params)
     sbpr1 = SBPR1(**sbpr1_params)
     sbpr1 = sbpr1.fit(X_train)
     sbpr1 = sbpr1.train(sampler)

@@ -109,7 +109,7 @@ class Sample:
 
 class SBPR2:
     def __init__(self, unique_items = 100, learning_rate = 0.01, n_factors = 15, n_iters = 10, batch_size = 1, 
-                 social_coefficient = 1, reg_u = 0.015, reg_i = 0.025, reg_k = 0.025, reg_j = 0.025, seed = 1234, verbose = True):
+                 social_coefficient = 1, reg_u = 0.015, reg_i = 0.025, reg_k = 0.015, reg_j = 0.015, seed = 1234, verbose = True):
         self.unique_items = unique_items
         self.reg_u = reg_u
         self.reg_i = reg_i
