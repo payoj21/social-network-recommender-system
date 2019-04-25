@@ -19,11 +19,6 @@ from tqdm import trange
 from sklearn.metrics import *
 from itertools import islice
 
-bpr = BPR()
-sbpr1 = SBPR1()
-sbpr2 = SBPR2()
-rr = RandomRanking()
-mp = MostPopular()
 
 def saveAUCPlot(dataset, aname):
     f = open('./results/' + dataset + '/' + aname + '_AUC.pkl', 'rb')
@@ -39,7 +34,6 @@ def loadModel(dataset, aname):
         bpr_params = pickle.load(f)['blobs']
         model.user_factors = bpr_params['user_factors']
         model.item_factors = bpr_params['item_factors']
-        bpr = model
         f.close()
     elif aname == 'SBPR1':
         f = open('./models/' + dataset + '/sbpr1_model.pkl', 'rb')
@@ -47,7 +41,6 @@ def loadModel(dataset, aname):
         sbpr1_params = pickle.load(f)['blobs']
         model.user_factors = sbpr1_params['user_factors']
         model.item_factors = sbpr1_params['item_factors']
-        sbpr1 = model
         f.close()
     elif aname == 'SBPR2':
         f = open('./models/' + dataset + '/sbpr2_model.pkl', 'rb')
@@ -55,7 +48,6 @@ def loadModel(dataset, aname):
         sbpr2_params = pickle.load(f)['blobs']
         model.user_factors = sbpr2_params['user_factors']
         model.item_factors = sbpr2_params['item_factors']
-        sbpr2 = model
         f.close()
     elif aname == 'RandomRanking':
         f = open('./models/' + dataset + '/random_model.pkl', 'rb')
@@ -63,7 +55,6 @@ def loadModel(dataset, aname):
         rr_params = pickle.load(f)['blobs']
         model.n_users = rr_params['n_users']
         model.n_items = rr_params['n_items']
-        rr = model
         f.close() 
     elif aname == 'MostPopular':
         f = open('./models/' + dataset + '/mp_model.pkl', 'rb')
@@ -71,7 +62,6 @@ def loadModel(dataset, aname):
         mp_params = pickle.load(f)['blobs']
         model.mappings = mp_params['mappings']
         model.topN = mp_params['topN']
-        mp = model
         f.close() 
     return model 
 
@@ -123,23 +113,11 @@ def getRecommendations(model, X_test, N, df, mappings):
 
 def getMetrics(df_test, df, N):
     rla = topn.RecListAnalysis()
-    rla.add_metric(topn.ndcg)
     rla.add_metric(topn.recall)
     results = rla.compute(df_test, df)
-    ndcg_mean = results['ndcg'].mean()
     recall_mean = results['recall'].mean()
-    return ndcg_mean, recall_mean
+    return recall_mean
 
-def coldStart(mappings, df, df_test, X_test):
-    total_cold_start_users = df.groupby('user').filter(lambda x : len(x) <= 6)['user'].unique()
-    coded_user = [mappings['user_code'][user] for user in total_cold_start_users]
-    true_ratings = dict([user, mappings['code_item'][X_test[mappings['user_code'][user]].indices[0]]] for user in total_cold_start_users)
-    cold_start_ratings = pd.DataFrame(columns=['user','item','rating'])
-    for user in total_cold_start_users:
-        cold_start_ratings = pd.concat([cold_start_ratings, df.query('user == @user & item == @true_ratings[@user]')], axis = 0)
-    cold_start_users = list(cold_start_ratings['user'].unique())
-    df_cold_start = df_test.query('user in @cold_start_users')
-    return df_cold_start
 
 dataset = sys.argv[1]
 file_dir = '../data/' + dataset
@@ -149,42 +127,19 @@ df = pickle.load(pos_file)
 X, mappings = getMatrix(df)
 _, X_test = getTrainTest(X)
 print ("Got matrices")
+recall_list = [5, 20, 40, 60, 70, 80, 100]
 
+recalls = {}
 for aname in ['BPR', 'SBPR1', 'SBPR2']:
     print (aname)
     print ('--------------------------------')
     try:
-        f = open('./results/' + dataset + '/' + aname + '_AUC.pkl', 'rb')
-        auc = pickle.load(f)
-        f.close()
-        plt.plot(range(len(auc)), auc)
-        plt.savefig('./results/' + dataset + '/' + aname + '_100epochs.png')
-        print ("Saved AUC")
         model = loadModel(dataset, aname)
-        
-        df_test = getRecommendations(model, X_test, 5, df, mappings)
-        df_cold_start = coldStart(mappings, df, df_test, X_test)
-        ndcg_at_5, recall_at_5 = getMetrics(df_test, df, 5)
-        print ("NDCG@5 =", ndcg_at_5)
-        print ("Recall@5 =", recall_at_5)
-        print ()
-        print ("--- Cold Start")
-        ndcg_at_5, recall_at_5 = getMetrics(df_cold_start, df, 5)
-        print ("NDCG@5 =", ndcg_at_5)
-        print ("Recall@5 =", recall_at_5)
-        print ()
-        df_test = getRecommendations(model, X_test, 10, df, mappings)
-        df_cold_start = coldStart(mappings, df, df_test, X_test)
-        ndcg_at_10, recall_at_10 = getMetrics(df_test, df, 10)
-        print ("NDCG@10 =", ndcg_at_10)
-        print ("Recall@10 =", recall_at_10)
-        print ()
-        print ("--- Cold Start")
-        ndcg_at_10, recall_at_10 = getMetrics(df_cold_start, df, 10)
-        print ("NDCG@10 =", ndcg_at_10)
-        print ("Recall@10 =", recall_at_10)   
-        
-        print ()
+        recalls[aname] = []
+        for i in recall_list:
+            df_test = getRecommendations(model, X_test, i, df, mappings)
+            recalls[aname].append(getMetrics(df_test, df, i))
+
     except Exception as e:
         print (e)
         
@@ -193,47 +148,22 @@ for aname in ['RandomRanking', 'MostPopular']:
     
     print (aname)
     print ('--------------------------------')
-    try:
-        f = open('./results/' + dataset + '/' + aname + '_AUC.pkl', 'rb')
-        auc = pickle.load(f)
-        f.close()
-        print ("AUC =", auc)
-        print ()
+    try:        
         model = loadModel(dataset, aname)
-        
-        recommendation, users, ranks = model.recommend(X_test, N = 5)
-        df_test = pd.DataFrame({'user': flatten(users), 'item': flatten(recommendation)})
-        df_test['item'] = [mappings['code_item'][item] for item in df_test['item'].astype(int)]
-        df_test['user'] = [mappings['code_user'][user] for user in df_test['user'].astype(int)]
-        df_test['rank'] = flatten(ranks)
-        
-        df_cold_start = coldStart(mappings, df, df_test, X_test)
-        ndcg_at_5, recall_at_5 = getMetrics(df_test, df, 5)
-        print ("NDCG@5 =", ndcg_at_5)
-        print ("Recall@5 =", recall_at_5)
-        print ()
-        print ("--- Cold Start")
-        ndcg_at_5, recall_at_5 = getMetrics(df_cold_start, df, 5)
-        print ("NDCG@5 =", ndcg_at_5)
-        print ("Recall@5 =", recall_at_5)
-        print ()
-        
-        recommendation, users, ranks = model.recommend(X_test, N = 10)
-        df_test = pd.DataFrame({'user': flatten(users), 'item': flatten(recommendation)})
-        df_test['item'] = [mappings['code_item'][item] for item in df_test['item'].astype(int)]
-        df_test['user'] = [mappings['code_user'][user] for user in df_test['user'].astype(int)]
-        df_test['rank'] = flatten(ranks)
-        
-        df_cold_start = coldStart(mappings, df, df_test, X_test)
-        ndcg_at_10, recall_at_10 = getMetrics(df_test, df, 10)
-        print ("NDCG@10 =", ndcg_at_10)
-        print ("Recall@10 =", recall_at_10)
-        print ()
-        print ("--- Cold Start")
-        ndcg_at_10, recall_at_10 = getMetrics(df_cold_start, df, 10)
-        print ("NDCG@10 =", ndcg_at_10)
-        print ("Recall@10 =", recall_at_10)   
-        
-        print ()
+        recalls[aname] = []
+        for i in recall_list:
+            recommendation, users, ranks = model.recommend(X_test, i)
+            df_test = pd.DataFrame({'user': flatten(users), 'item': flatten(recommendation)})
+            df_test['item'] = [mappings['code_item'][item] for item in df_test['item'].astype(int)]
+            df_test['user'] = [mappings['code_user'][user] for user in df_test['user'].astype(int)]
+            df_test['rank'] = flatten(ranks)
+            recalls[aname].append(getMetrics(df_test, df, i))
+
     except Exception as e:
         print (e)
+        
+for key in recalls:
+    plt.plot(recall_list, recalls[key], label=key)
+plt.title('Recall vs Top N')
+plt.legend()
+plt.savefig('./results/' + dataset + '/Recall_TopN')
