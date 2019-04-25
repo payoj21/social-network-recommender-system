@@ -92,7 +92,7 @@ class Sample:
         self.SP = SP
         self.mappings = mappings
         
-    def static(self, social = False):
+    def uniform(self, social = False):
         user = np.random.choice(self.P['user'])
         
         items = {}
@@ -166,7 +166,7 @@ class SBPR1:
         self.auc_scores = []
         for _ in loop:
             for _ in range(self.batch_iters):
-                user, items = sampler.static(True)
+                user, items = sampler.uniform(True)
                 sampled_users = np.zeros(self.batch_size, dtype = np.int)
                 sampled_users[0] = sampler.mappings['user_code'][user]
                 
@@ -359,7 +359,7 @@ if __name__ == '__main__':
     
     mappings = dataHandler.mappings
     
-    # Create the sampler object (default: static)
+    # Create the sampler object (default: uniform sampling)
     sampler = Sample(dataHandler.P, dataHandler.SP, mappings)
     
     # Initiliaze BPR params
