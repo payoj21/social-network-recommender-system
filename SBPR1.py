@@ -54,23 +54,30 @@ class DataHandler:
         print('data dimension: \n', self.ratings.shape)
         return self.ratings
         
-    def getTrainTest(self, test_size = 0.1, seed = 20191004):
+    def getTrainTest(self, test_size = 0.1, seed = 20191004, fold=None, dataset=None):
         assert test_size < 1.0 and test_size > 0.0
+        if fold is None:
+            self.ratings = self.getMatrix()
+            # Dictionary Of Keys based sparse matrix is more efficient
+            # for constructing sparse matrices incrementally compared with csr_matrix
+            train = self.ratings.copy().todok()
+            test = dok_matrix(train.shape)
 
-        # Dictionary Of Keys based sparse matrix is more efficient
-        # for constructing sparse matrices incrementally compared with csr_matrix
-        train = self.ratings.copy().todok()
-        test = dok_matrix(train.shape)
+            rstate = np.random.RandomState(seed)
+            for u in range(self.ratings.shape[0]):
+                split_index = self.ratings[u].indices
+                n_splits = ceil(test_size * split_index.shape[0])
+                test_index = rstate.choice(split_index, size = n_splits, replace = False)
+                test[u, test_index] = self.ratings[u, test_index]
+                train[u, test_index] = 0
 
-        rstate = np.random.RandomState(seed)
-        for u in range(self.ratings.shape[0]):
-            split_index = self.ratings[u].indices
-            n_splits = ceil(test_size * split_index.shape[0])
-            test_index = rstate.choice(split_index, size = n_splits, replace = False)
-            test[u, test_index] = self.ratings[u, test_index]
-            train[u, test_index] = 0
-
-        train, test = train.tocsr(), test.tocsr()
+            train, test = train.tocsr(), test.tocsr()
+        else:
+            f = open('../data/' + dataset + '/X_train' + str(fold) + '.pkl', 'rb')
+            train = pickle.load(f)
+            f.close()
+            f = open('../data/' + dataset + '/X_test' + str(fold) + '.pkl', 'rb')
+            test = pickle.load(f)
         return train, test
 
     def save(self, path, values, name):
@@ -347,8 +354,8 @@ if __name__ == '__main__':
     dataHandler = DataHandler()
     dataHandler.loadData(dataset)
     
-    X = dataHandler.getMatrix()
-    X_train, X_test = dataHandler.getTrainTest()
+#     X = dataHandler.getMatrix()
+    X_train, X_test = dataHandler.getTrainTest() # change folds here for crossvalidation
     
     mappings = dataHandler.mappings
     

@@ -37,22 +37,31 @@ class DataHandler:
         self.SP = social_positive_df
         self.unique_items = len(self.P['item'].unique())
 
-    def getMatrix(self):
-        data = self.P
-        for col in ('item', 'user', 'rating'):
-            data[col] = data[col].astype('category')
+    def getTrainTest(self, test_size = 0.1, seed = 20191004, fold=None, dataset=None):
+        assert test_size < 1.0 and test_size > 0.0
+        if fold is None:
+            self.ratings = self.getMatrix()
+            # Dictionary Of Keys based sparse matrix is more efficient
+            # for constructing sparse matrices incrementally compared with csr_matrix
+            train = self.ratings.copy().todok()
+            test = dok_matrix(train.shape)
 
-        code_user = dict(zip(data['user'].cat.codes, data['user']))
-        user_code = dict(zip(data['user'], data['user'].cat.codes))
-        code_item = dict(zip(data['item'].cat.codes, data['item']))
-        item_code = dict(zip(data['item'], data['item'].cat.codes))
+            rstate = np.random.RandomState(seed)
+            for u in range(self.ratings.shape[0]):
+                split_index = self.ratings[u].indices
+                n_splits = ceil(test_size * split_index.shape[0])
+                test_index = rstate.choice(split_index, size = n_splits, replace = False)
+                test[u, test_index] = self.ratings[u, test_index]
+                train[u, test_index] = 0
 
-        self.mappings = {'code_user' : code_user, 'user_code' : user_code, 'code_item' : code_item, 'item_code' : item_code}
-
-        self.ratings = csr_matrix((data['rating'], (data['user'].cat.codes, data['item'].cat.codes)))
-        self.ratings.eliminate_zeros()
-        print('data dimension: \n', self.ratings.shape)
-        return self.ratings
+            train, test = train.tocsr(), test.tocsr()
+        else:
+            f = open('../data/' + dataset + '/X_train' + str(fold) + '.pkl', 'rb')
+            train = pickle.load(f)
+            f.close()
+            f = open('../data/' + dataset + '/X_test' + str(fold) + '.pkl', 'rb')
+            test = pickle.load(f)
+        return train, test
         
     def getTrainTest(self, test_size = 0.1, seed = 20191004):
         assert test_size < 1.0 and test_size > 0.0
@@ -349,8 +358,8 @@ if __name__ == '__main__':
     dataHandler = DataHandler()
     dataHandler.loadData(dataset)
     
-    X = dataHandler.getMatrix()
-    X_train, X_test = dataHandler.getTrainTest()
+#     X = dataHandler.getMatrix()
+    X_train, X_test = dataHandler.getTrainTest() # change folds here for crossvalidation
     
     mappings = dataHandler.mappings
     
