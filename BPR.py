@@ -54,23 +54,30 @@ class DataHandler:
         print('data dimension: \n', self.ratings.shape)
         return self.ratings
         
-    def getTrainTest(self, test_size = 0.1, seed = 20191004):
+    def getTrainTest(self, test_size = 0.1, seed = 20191004, fold=None, dataset=None):
         assert test_size < 1.0 and test_size > 0.0
+        if fold is None:
+            self.ratings = self.getMatrix()
+            # Dictionary Of Keys based sparse matrix is more efficient
+            # for constructing sparse matrices incrementally compared with csr_matrix
+            train = self.ratings.copy().todok()
+            test = dok_matrix(train.shape)
 
-        # Dictionary Of Keys based sparse matrix is more efficient
-        # for constructing sparse matrices incrementally compared with csr_matrix
-        train = self.ratings.copy().todok()
-        test = dok_matrix(train.shape)
+            rstate = np.random.RandomState(seed)
+            for u in range(self.ratings.shape[0]):
+                split_index = self.ratings[u].indices
+                n_splits = ceil(test_size * split_index.shape[0])
+                test_index = rstate.choice(split_index, size = n_splits, replace = False)
+                test[u, test_index] = self.ratings[u, test_index]
+                train[u, test_index] = 0
 
-        rstate = np.random.RandomState(seed)
-        for u in range(self.ratings.shape[0]):
-            split_index = self.ratings[u].indices
-            n_splits = ceil(test_size * split_index.shape[0])
-            test_index = rstate.choice(split_index, size = n_splits, replace = False)
-            test[u, test_index] = self.ratings[u, test_index]
-            train[u, test_index] = 0
-
-        train, test = train.tocsr(), test.tocsr()
+            train, test = train.tocsr(), test.tocsr()
+        else:
+            f = open('../data/' + dataset + '/X_train' + str(fold) + '.pkl', 'rb')
+            train = pickle.load(f)
+            f.close()
+            f = open('../data/' + dataset + '/X_test' + str(fold) + '.pkl', 'rb')
+            test = pickle.load(f)
         return train, test
 
     def save(self, path, values, name):
@@ -239,45 +246,6 @@ class BPR:
         topN_scores = list(islice((score for score in topN_scores), N))
         return topN_items, topN_scores
 
-    def get_similar_items(self, N = 10, item_ids = None):
-        """
-        return the top N similar items for itemid, where
-        cosine distance is used as the distance metric
-        
-        Parameters
-        ----------
-        N : int, default 5
-            top-N similar items' N
-            
-        item_ids : 1d iterator, e.g. list or numpy array, default None
-            the item ids that we wish to find the similar items
-            of, the default None will compute the similar items
-            for all the items
-        
-        Returns
-        -------
-        similar_items : 2d ndarray, shape [number of query item_ids, N]
-            each row is the top-N most similar item id for each
-            query item id
-        """
-        # cosine distance is proportional to normalized euclidean distance,
-        # thus we normalize the item vectors and use euclidean metric so
-        # we can use the more efficient kd-tree for nearest neighbor search;
-        # also the item will always to nearest to itself, so we add 1 to 
-        # get an additional nearest item and remove itself at the end
-        normed_factors = normalize(self.item_factors)
-        knn = NearestNeighbors(n_neighbors = N + 1, metric = 'euclidean')
-        knn.fit(normed_factors)
-
-        # returns a distance, index tuple,
-        # we don't actually need the distance
-        if item_ids is not None:
-            normed_factors = normed_factors[item_ids]
-
-        _, items = knn.kneighbors(normed_factors)
-        similar_items = items[:, 1:].astype(np.uint32)
-        return similar_items
-
 if __name__ == '__main__':
     
     # Get the data
@@ -285,8 +253,8 @@ if __name__ == '__main__':
     dataHandler = DataHandler()
     dataHandler.loadData(dataset)
     
-    X = dataHandler.getMatrix()
-    X_train, X_test = dataHandler.getTrainTest()
+#     X = dataHandler.getMatrix()
+    X_train, X_test = dataHandler.getTrainTest() # change folds here for crossvalidation
     
     mappings = dataHandler.mappings
     

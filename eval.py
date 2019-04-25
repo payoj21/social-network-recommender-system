@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 from BPR import BPR
 from SBPR1 import SBPR1
 from SBPR2 import SBPR2
+from RandomRanking import RandomRanking
+from MostPopular import MostPopular
 from lenskit import topn
 import os
 import numpy as np
@@ -46,8 +48,21 @@ def loadModel(dataset, aname):
         model.user_factors = sbpr2_params['user_factors']
         model.item_factors = sbpr2_params['item_factors']
         f.close()
-        
-    return model, df  
+    elif aname == 'RandomRanking':
+        f = open('./models/' + dataset + '/random_model.pkl', 'rb')
+        model = RandomRanking()
+        rr_params = pickle.load(f)['blobs']
+        model.n_users = rr_params['n_users']
+        model.n_items = rr_params['n_items']
+        f.close() 
+    elif aname == 'MostPopular':
+        f = open('./models/' + dataset + '/mp_model.pkl', 'rb')
+        model = MostPopular()
+        mp_params = pickle.load(f)['blobs']
+        model.mappings = mp_params['mappings']
+        model.topN = mp_params['topN']
+        f.close() 
+    return model 
 
 def getMatrix(data):
     for col in ('item', 'user', 'rating'):
@@ -124,21 +139,6 @@ X, mappings = getMatrix(df)
 _, X_test = getTrainTest(X)
 print ("Got matrices")
 
-# test_users = []
-# test_items = []
-# test_ratings = []
-# for i in range(X_test.shape[0]):
-#     y = X_test.getrow(i).indices
-#     if len(y) > 0:
-#         data = X_test.getrow(i).data
-#         user = mappings['code_user'][i]
-#         item = [mappings['code_item'][y_i] for y_i in y]
-#         test_users.extend([user]*len(y))
-#         test_items.extend(item)
-#         test_ratings.extend(data)
-# 
-# test_data = pd.DataFrame({'user': test_users, 'item': test_items, 'rating': test_ratings})
-
 for aname in ['BPR', 'SBPR1', 'SBPR2']:
     print (aname)
     print ('--------------------------------')
@@ -170,10 +170,59 @@ for aname in ['BPR', 'SBPR1', 'SBPR2']:
         print ()
         print ("--- Cold Start")
         ndcg_at_10, recall_at_10 = getMetrics(df_cold_start, df, 10)
-        print ("NDCG@5 =", ndcg_at_10)
-        print ("Recall@5 =", recall_at_10)   
+        print ("NDCG@10 =", ndcg_at_10)
+        print ("Recall@10 =", recall_at_10)   
         
         print ()
-    except:
-        print ('exception')
-        pass
+    except Exception as e:
+        print (e)
+        
+flatten = lambda l: [item for sublist in l for item in sublist]
+for aname in ['RandomRanking', 'MostPopular']:
+    
+    print (aname)
+    print ('--------------------------------')
+    try:
+        f = open('./results/' + dataset + '/' + aname + '_AUC.pkl', 'rb')
+        auc = pickle.load(f)
+        f.close()
+        print ("AUC =", auc)
+        print ()
+        model = loadModel(dataset, aname)
+        
+        recommendation, users, ranks = model.recommend(X_test, N = 5)
+        df_test = pd.DataFrame({'user': flatten(users), 'item': flatten(recommendation)})
+        df_test['item'] = [mappings['code_item'][item] for item in df_test['item'].astype(int)]
+        df_test['user'] = [mappings['code_user'][user] for user in df_test['user'].astype(int)]
+        df_test['rank'] = flatten(ranks)
+        
+        df_cold_start = coldStart(mappings, df, df_test, X_test)
+        ndcg_at_5, recall_at_5 = getMetrics(df_test, df, 5)
+        print ("NDCG@5 =", ndcg_at_5)
+        print ("Recall@5 =", recall_at_5)
+        print ()
+        print ("--- Cold Start")
+        ndcg_at_5, recall_at_5 = getMetrics(df_cold_start, df, 5)
+        print ("NDCG@5 =", ndcg_at_5)
+        print ("Recall@5 =", recall_at_5)
+        print ()
+        
+        recommendation, users, ranks = model.recommend(X_test, N = 10)
+        df_test = pd.DataFrame({'user': flatten(users), 'item': flatten(recommendation)})
+        df_test['item'] = [mappings['code_item'][item] for item in df_test['item'].astype(int)]
+        df_test['user'] = [mappings['code_user'][user] for user in df_test['user'].astype(int)]
+        df_test['rank'] = flatten(ranks)
+        
+        df_cold_start = coldStart(mappings, df, df_test, X_test)
+        ndcg_at_10, recall_at_10 = getMetrics(df_test, df, 10)
+        print ("NDCG@10 =", ndcg_at_10)
+        print ("Recall@10 =", recall_at_10)
+        print ()
+        print ("--- Cold Start")
+        ndcg_at_10, recall_at_10 = getMetrics(df_cold_start, df, 10)
+        print ("NDCG@10 =", ndcg_at_10)
+        print ("Recall@10 =", recall_at_10)   
+        
+        print ()
+    except Exception as e:
+        print (e)
