@@ -1,9 +1,6 @@
 # README
 
-We are a group of 2 students studying in the University of Colorado, Boulder for INFO 5871: Recommender Systems.
-
-
-This projects implements "one-class" recommendation system to solve user preference problem by leveraging social connections of users.
+This project implements variations of Bayesian Personalised Ranking and compare the perfomances of each with otehr. We tried to understand if users' social connections can be leveraged to improve rankings of items recommended to them by a recommender system. We implemented the below mentioned paper and refered to github repositories to get started with our project.
 
 References **(cloned in the references directory)**:
 -  [__Leveraging Social Connections to Improve Personalized Ranking for Collaborative Filtering__](https://dl.acm.org/citation.cfm?doid=2661829.2661998)
